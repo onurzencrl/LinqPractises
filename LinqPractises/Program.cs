@@ -1,11 +1,14 @@
 ﻿
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Microsoft.Extensions.Logging;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Diagnostics.Tracing;
 using System.Reflection;
+using System.Text.Json;
 
 async void Main(string[] args)
 {
@@ -5108,6 +5111,629 @@ class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
         builder.OwnsOne(e => e.Adress);
     }
 }
+#endregion
+
+
+#region Temporal Tables
+
+ApplicationDbContext context = new();
+
+#region Temporal Tables Nedir?
+//Veri değişikliği süreçlerinde kayıtları depolayan ve zaman içinde farklı noktalardaki tablo verilerinin analizi için kullanılan ve sistem tarafından yönetilen tablolardır.
+//EF Core 6.0 ile desteklenmektedir.
+#endregion
+#region Temporal Tables Özelliğiyle Nasıl Çalışılır?
+//EF Core'daki migration yapıları sayesinde tempral table'lar oluşturulup veritabanında üretilebilmektedir.
+//Mevcut tabloları migration'lar aracılığıyla Temporal Table'lara dönüştürülebilmektedir.
+//Herhangi bir tablonun verisel olarak geçmişini rahatlıkla sorgulayabiliriz.
+//Herhangi bir tablodaki bir verinin geçmişteki herhangi bir T anındaki hali/duırumu/verileri geri getirilebilmektedir.
+#endregion
+#region Temporal Table Nasıl Uygulanır?
+
+#region IsTemoral Yapılandırması
+//EF Core bu yapılandırma fonksiyonu sayesinde ilgili entity'e karşılık üretilecek tabloda temporal table oluşturacağını anlamaktadır. Yahut önceden ilgili tablo üretilmişse eğer onu temporal table'a dönüştürecektir.
+#endregion
+#region Temporal Table İçin Üretilen Migration'ın İncelenmesi
+
+#endregion
+#endregion
+#region Temporal Table'ı Test Edelim
+
+#region Veri Eklerken
+//Temporal Table'a veri ekleme süreçlerinde herhangi bir kayıt atılmaz! Temporal Table'ın yapısı, var olan veirler üzerindeki zamansal değişimleri takip etmek üzerine kuruludur!
+//var persons = new List<Person>() {
+//    new(){ Name = "Gençay", Surname = "Yıldız", BirthDate = DateTime.UtcNow },
+//    new(){ Name = "Mustafa", Surname = "Yıldız", BirthDate = DateTime.UtcNow },
+//    new(){ Name = "Suzan", Surname = "Yıldız", BirthDate = DateTime.UtcNow },
+//    new(){ Name = "Yarkın", Surname = "Yıldız", BirthDate = DateTime.UtcNow },
+//    new(){ Name = "Şuayip", Surname = "Yıldız", BirthDate = DateTime.UtcNow },
+//    new(){ Name = "Sebahattin", Surname = "Yıldız", BirthDate = DateTime.UtcNow }
+//};
+
+//await context.Persons.AddRangeAsync(persons);
+//await context.SaveChangesAsync();
+#endregion
+#region Veri Güncellerken
+//var person = await context.Persons.FindAsync(3);
+//person.Name = "Ahmet";
+//await context.SaveChangesAsync();
+#endregion
+#region Veri Silerken
+//var person = await context.Persons.FindAsync(3);
+//context.Persons.Remove(person);
+//await context.SaveChangesAsync();
+#endregion
+#endregion
+#region Temporal Table Üzerinden Geçmiş Verisel İzleri Sorgulama
+
+#region TemporalAsOf
+//Belirli bir zaman için değişikiğe uğrayan tüm öğeleri döndüren bir fonksiyondur.
+//var datas = await context.Persons.TemporalAsOf(new DateTime(2022, 12, 09, 05, 30, 04)).Select(p => new
+//{
+//    p.Id,
+//    p.Name,
+//    PeriodStart = EF.Property<DateTime>(p, "PeriodStart"),
+//    PeriodEnd = EF.Property<DateTime>(p, "PeriodEnd"),
+//}).ToListAsync();
+
+//foreach (var data in datas)
+//{
+//    Console.WriteLine(data.Id + " " + data.Name + " | " + data.PeriodStart + " - " + data.PeriodEnd);
+//}
+#endregion
+#region TemporalAll
+//Güncellenmiş yahut silinmiş olan tüm verilerin geçmiş sürümlerini veya geçerli durumlarını döndüren bir fonksiyondur.
+//var datas = await context.Persons.TemporalAll().Select(p => new
+//{
+//    p.Id,
+//    p.Name,
+//    PeriodStart = EF.Property<DateTime>(p, "PeriodStart"),
+//    PeriodEnd = EF.Property<DateTime>(p, "PeriodEnd"),
+//}).ToListAsync();
+
+//foreach (var data in datas)
+//{
+//    Console.WriteLine(data.Id + " " + data.Name + " | " + data.PeriodStart + " - " + data.PeriodEnd);
+//}
+#endregion
+#region TemporalFromTo
+//Belirli bir zaman aralığı içerisindelki verileri döndüren fonksiyondur. Başlangıç ve bitiş zamanı dahil değildir.
+////Başlangıç : 2022-12-09 05:29:55.0953716
+//var baslangic = new DateTime(2022, 12, 09, 05, 29, 55);
+////Bitiş     : 2022-12-09 05:30:30.3459797
+//var bitis = new DateTime(2022, 12, 09, 05, 30, 30);
+
+//var datas = await context.Persons.TemporalFromTo(baslangic, bitis).Select(p => new
+//{
+//    p.Id,
+//    p.Name,
+//    PeriodStart = EF.Property<DateTime>(p, "PeriodStart"),
+//    PeriodEnd = EF.Property<DateTime>(p, "PeriodEnd"),
+//}).ToListAsync();
+
+//foreach (var data in datas)
+//{
+//    Console.WriteLine(data.Id + " " + data.Name + " | " + data.PeriodStart + " - " + data.PeriodEnd);
+//}
+#endregion
+#region TemporalBetween
+////Belirli bir zaman aralığı içerisindelki verileri döndüren fonksiyondur. Başlangıç verisi dahil değil ve bitiş zamanı ise dahildir.
+////Başlangıç : 2022-12-09 05:29:55.0953716
+//var baslangic = new DateTime(2022, 12, 09, 05, 29, 55);
+////Bitiş     : 2022-12-09 05:30:30.3459797
+//var bitis = new DateTime(2022, 12, 09, 05, 30, 30);
+
+//var datas = await context.Persons.TemporalBetween(baslangic, bitis).Select(p => new
+//{
+//    p.Id,
+//    p.Name,
+//    PeriodStart = EF.Property<DateTime>(p, "PeriodStart"),
+//    PeriodEnd = EF.Property<DateTime>(p, "PeriodEnd"),
+//}).ToListAsync();
+
+//foreach (var data in datas)
+//{
+//    Console.WriteLine(data.Id + " " + data.Name + " | " + data.PeriodStart + " - " + data.PeriodEnd);
+//}
+#endregion
+#region TemporalContainedIn
+////Belirli bir zaman aralığı içerisindelki verileri döndüren fonksiyondur. Başlangıç ve bitiş zamanı ise dahildir.
+////Başlangıç : 2022-12-09 05:29:55.0953716
+//var baslangic = new DateTime(2022, 12, 09, 05, 29, 55);
+////Bitiş     : 2022-12-09 05:30:30.3459797
+//var bitis = new DateTime(2022, 12, 09, 05, 30, 30);
+
+//var datas = await context.Persons.TemporalContainedIn(baslangic, bitis).Select(p => new
+//{
+//    p.Id,
+//    p.Name,
+//    PeriodStart = EF.Property<DateTime>(p, "PeriodStart"),
+//    PeriodEnd = EF.Property<DateTime>(p, "PeriodEnd"),
+//}).ToListAsync();
+
+//foreach (var data in datas)
+//{
+//    Console.WriteLine(data.Id + " " + data.Name + " | " + data.PeriodStart + " - " + data.PeriodEnd);
+//}
+#endregion
+#endregion
+#region Silinmiş Bir Veriyi Temporal Table'dan Geri Getirme
+//Silinmiş bir veriyi temporal table'dan getirebilmek için öncelikle yapılması gerekenb ilgili verinin silindiği tarihi bulmamız gerekmektedir. Ardından TemporalAsOf fonksiyonu ile silğinen verinin geçmiş değeri elde edilebilir ve fizilse tabloya bu veri taşınabilir.
+
+//Silindiği tarih
+var dateOfDelete = await context.Persons.TemporalAll()
+    .Where(p => p.Id == 3)
+    .OrderByDescending(p => EF.Property<DateTime>(p, "PeriodEnd"))
+    .Select(p => EF.Property<DateTime>(p, "PeriodEnd"))
+    .FirstAsync();
+
+var deletedPerson = await context.Persons.TemporalAsOf(dateOfDelete.AddMilliseconds(-1))
+    .FirstOrDefaultAsync(p => p.Id == 3);
+
+await context.AddAsync(deletedPerson);
+
+await context.Database.OpenConnectionAsync();
+
+await context.Database.ExecuteSqlInterpolatedAsync($"SET IDENTITY_INSERT dbo.Persons ON");
+await context.SaveChangesAsync();
+await context.Database.ExecuteSqlInterpolatedAsync($"SET IDENTITY_INSERT dbo.Persons OFF");
+
+#region SET IDENTITY_INSERT Konfigürasyonu
+//Id ile veri ekleme sürecinde ilgili verinin id sütununa kayıt işleyebilmek için veriyi fiziksel tabloya taşıma işleminden önce veritabanı seviyesinde SET IDENTITY_INSERT komutu eşliğinde id bazlı veri ekleme işlemi aktifleştirilmelidir.
+#endregion
+#endregion
+
+class Person
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public string Surname { get; set; }
+    public DateTime BirthDate { get; set; }
+}
+class Employee
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public string Surname { get; set; }
+}
+class ApplicationDbContext : DbContext
+{
+    public DbSet<Person> Persons { get; set; }
+    public DbSet<Employee> Employees { get; set; }
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Employee>().ToTable("Employees", builder => builder.IsTemporal());
+        modelBuilder.Entity<Person>().ToTable("Persons", builder => builder.IsTemporal());
+    }
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        optionsBuilder.UseSqlServer("Server=localhost, 1433;Database=ApplicationDB;User ID=SA;Password=1q2w3e4r+!;TrustServerCertificate=True");
+    }
+}
+#endregion
+
+#region Connection Resilency
+
+ApplicationDbContext context = new();
+
+#region Connection Resiliency Nedir?
+//EF Core üzerinde yapılan veritabanı çalışmaları sürecinde ister istemez veritabanı bağlantısında kopuşlar/kesintiler vs. meydana gelebilmektedir. 
+
+//Connection Resiliency ile kopan bağlantıyı tekrar kurmak için gerekli tekrar bağlantı taleplerinde bulunabilir ve biryandan da execution strategy dediğimiz davranış modellerini belirleyerek bağlantıların kopması durumunda tekrar edecek olan sorguları baştan sona yeniden tetikleyebiliriz.
+#endregion
+#region EnableRetryOnFailure
+//Uygulama sürecinde veritabanı bağlantısı koptuğu taktirde bu yapılandırma sayesinde bağlantıyı tekrardan kurmaya çalışabiliyirouz.
+
+//while (true)
+//{
+//    await Task.Delay(2000);
+//    var persons = await context.Persons.ToListAsync();
+//    persons.ForEach(p => Console.WriteLine(p.Name));
+//    Console.WriteLine("*******************");
+//}
+
+#region MaxRetryCount
+//Yeniden bağlantı sağlanması durumunun kaç kere gerçekleştirlecğeini bildirmektedir.
+//Defualt değeri 6'dır.
+#endregion
+#region MaxRetryDelay
+//Yeniden bağlantı sağlanması periyodunu bildirmektedir.
+//Default değeri 30'dur.
+#endregion
+#endregion
+
+#region Execution Strategies
+//EF Core ile yapılan bir işlem sürecinde veritabanı bağlatısı koptuğu taktirde yeniden bağlantı denenirken yapılan davranışa/alınan aksiyona Execution Strategy denmektedir.
+
+//Bu stratejiyi default dğerlerde kullanabieceğimiz gibi custom olarak da kendimize göre özelleştireibilir ve bağlantı koptuğu durumlarda istediğimiz aksiyonları alabiliriz.
+
+#region Default Execution Strategy
+//Eğer ki Connection Resiliency için EnableRetryOnFailure metodunu kullanıyorsak bu default execution stratgy karşılık gelecektir.
+//MaxRetryCoun : 6
+//Delay : 30
+//Default değerlerin kullanılailmesi için EnableRetryOnFailure metodunun parametresis overload'ının kullanılması gerekmektedir.
+#endregion
+#region Custom Execution Strategy
+
+#region Oluşturma
+
+#endregion
+#region Kullanma - ExecutionStrategy
+
+//while (true)
+//{
+//    await Task.Delay(2000);
+//    var persons = await context.Persons.ToListAsync();
+//    persons.ForEach(p => Console.WriteLine(p.Name));
+//    Console.WriteLine("*******************");
+//}
+#endregion
+
+#endregion
+#region Bağlantı Koptuğu Anda Execute Edilmesi Gereken Tüm Çalışmaları Tekrar İşlemek
+//EF Core ile yapılan çalışma sürecinde veritabanı bağlantısının kesildiği durumlarda, bazen bağlantının tekrardan kurulması tek başına yetmemekte, keszintinin olduğu çalışmanın da baştan tekrardan işlenmesi gerekebilmetkedir. İşte bu tarz durumlara karşılık EF Core Execute - ExecuteAsync fonksiyonunu bizlere sunmaktadır.
+
+//Execute fonksiyonu, içerisine vermiş olduğumuz kodları commit edilene kadar işleyecektir. Eğer ki bağlantı kesilmesi meydana gelirse, bağlantının tekrardan kurulması durumunda Execute içerisindeki çalışmalar tekrar baştan işlenecek ve böylece yapılan işlemin tutarlılığı için gerekli çalışma sağlanmış olacaktır.
+
+//var strategy = context.Database.CreateExecutionStrategy();
+//await strategy.ExecuteAsync(async () =>
+//{
+//    using var transcation = await context.Database.BeginTransactionAsync();
+//    await context.Persons.AddAsync(new() { Name = "Hilmi" });
+//    await context.SaveChangesAsync();
+
+//    await context.Persons.AddAsync(new Person() { Name = "Şuayip" });
+//    await context.SaveChangesAsync();
+
+//    await transcation.CommitAsync();
+//});
+
+#endregion
+#region Execution Strategy Hangi Durumlarda Kullanılır?
+//Veritabanının şifresi belirli periyotlarda otomatik olarak değişen uygulamalarda güncel şifreyle connection string'i sağlayacak bir operasyonu custom execution strategy belirleyerek gerçekleştitrebilirsiniz.
+#endregion
+#endregion
+
+public class Person
+{
+    public int PersonId { get; set; }
+    public string Name { get; set; }
+}
+class ApplicationDbContext : DbContext
+{
+    public DbSet<Person> Persons { get; set; }
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+    }
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        #region Default Execution Strategy
+        //optionsBuilder.UseSqlServer("Server=localhost, 1433;Database=ApplicationDB;User ID=SA;Password=1q2w3e4r+!;TrustServerCertificate=True", builder => builder.EnableRetryOnFailure(
+        //    maxRetryCount: 5,
+        //    maxRetryDelay: TimeSpan.FromSeconds(15),
+        //    errorNumbersToAdd: new[] { 4060 }))
+        //    .LogTo(
+        //    filter: (eventId, level) => eventId.Id == CoreEventId.ExecutionStrategyRetrying,
+        //    logger: eventData =>
+        //    {
+        //        Console.WriteLine($"Bağlantı tekrar kurulmaktadır.");
+        //    });
+        #endregion
+        #region Custom Execution Strategy
+        optionsBuilder.UseSqlServer("Server=localhost, 1433;Database=ApplicationDB;User ID=SA;Password=1q2w3e4r+!;TrustServerCertificate=True", builder => builder.ExecutionStrategy(dependencies => new CustomExecutionStrategy(dependencies, 10, TimeSpan.FromSeconds(15))));
+        #endregion
+    }
+}
+
+class CustomExecutionStrategy : ExecutionStrategy
+{
+    public CustomExecutionStrategy(ExecutionStrategyDependencies dependencies, int maxRetryCount, TimeSpan maxRetryDelay) : base(dependencies, maxRetryCount, maxRetryDelay)
+    {
+    }
+
+    public CustomExecutionStrategy(DbContext context, int maxRetryCount, TimeSpan maxRetryDelay) : base(context, maxRetryCount, maxRetryDelay)
+    {
+    }
+
+    int retryCount = 0;
+    protected override bool ShouldRetryOn(Exception exception)
+    {
+        //Yeniden bağlantı durumunun söz konusu olduğu anlarda yapılacak işlemler...
+        Console.WriteLine($"#{++retryCount}. Bağlantı tekrar kuruluyor...");
+        return true;
+    }
+}
+#endregion
+
+#region Data Concurrency
+
+ApplicationDbContext context = new();
+
+#region Data Concurrency Nedir?
+//Geliştirdiğimiz uygulamalarda ister istemez verisel olarak tutarsızlıklar meydana gelebilmektedir. Örneğin; birden fazla uygulamanın yahut client'ın aynı veritabanı üzerinde eşzamanı olarak çalıltığı durumlarda verisel anlamda uyuglamadan uygulamaya yahut client'tan clienta tutarsızlıklar meydana gelebilir.
+//Data Concurrency kavramı, uygulamalardaki veri tutarsızlığı durumlarına karşılık yönetilebilirliği sağlayacak olan davranışları kapsayan bir kavramdır.
+
+//Bir uygulamada veri tutarsızlığının olması demek o uygulamayı kullanan kullanıcıları yanıltmak demektir.
+//Veri tutarsızlığının olduğu uygulamalarda istatistiksel olarak yanlış sonuçlar elde edilebilir...
+#endregion
+#region Stale & Dirty (Bayat & Kirli) Data Nedir?
+//Stale Data : Veri tutarsızlığına sebebiyet verebilecek güncellenmemiş yahut zamanı geçmiş olan verileri ifade etmektedir. Örneğin; bir ürünün stok durumu sıfırlandığı halde arayüz üzerinde bunu ifade eden bir güncelleme durumu söz konusu değilse işte bu stale data durumuna bir örnektir.
+
+//Dirty Data : Veri tutarszılığına sebebiyet verebilecek verinin hatalı yahut yanlış olduğunu ifade etmektedir. Örneğin; adı 'Ahmet' olan bir kullanıcının veritabanında 'Mehmet' olarak tutulması dirty data örneklendirmesidir.
+#endregion
+#region Last In Wins (Son Gelen Kazanır)
+//Bir veri yapısında son yapılan aksiyona göre en güncel verinin en üstte bulunmasını/varlığını korumasını ifade eden bir deyimsel terimdir.
+#endregion
+#region Pessimistic Lock (Kötümser Kilitleme)
+
+//Bir transaction sürecinde elde edilen veriler üzerinde farklı sorgularla değişiklik yapılmasını engellemek için ilgil iverilerin kitlenmesini(locking) sağlayarak değişikliğe karşı direnç oluşturulmasını ifade eden bir yöntemdir.
+
+//Bu verilerin kilitlenmesi durumu ilgili transaction'ın commit ya da rollback edilmesi ile sınırlıdır.
+
+#region Deadlock Nedir?
+//Kitlenmiş olan bir verinin veirtabanı seviyesinde meydana gelen sistemsel bir hatadan dolayı kilidinin çözülememesi yahut döngüsel olarak kilitlenme durumunun meydana gelmesini ifade eden bir terimdir.
+
+//Pessimistic Lock yönteminde deadlock durumunu yaşamanız bir ihtimaldir. O yüzden değerlendirlmesi gereken ve iyi düşünülerek tercih edilmesi gerken bir yaklaşımdır pessimistic lock yaklaşımı.
+#endregion
+#region  Kilitleme Çıkmazı - Ölüm Kilitlenmesi Nedir?
+
+#endregion
+#region WITH (XLOCK)
+//using var transaction = await context.Database.BeginTransactionAsync();
+//var data = await context.Persons.FromSql($"SELECT * FROM Persons WITH (XLOCK) WHERE PersonID = 5")
+//    .ToListAsync();
+//Console.WriteLine();
+//await transaction.CommitAsync();
+#endregion
+#endregion
+#region Optimistic Lock (İyimser Kilitmele)
+
+//Bir verinin stale olup olmadığını anlamak için herhangi bir locking işlemi olmaksızın versiyon mantığıonda çalışmamızı sağlayan yaklaşımdır.
+//Optimistic lock yönteminde, Pessimistic lock'da olduğu gibi veriler üzerinde tutarsızlığa mahal olabilecek değişiklikler fiziksel olarka engellenmemektedir. Yani veriler tutarsızlığı sağlayacak şekilde değiştirilebilir. 
+//Amma velakin Optimistic lock yaklaşımı ile bu veriler üzerindeki tutarsızlık durumunu takip edebilmek için versiyon bilgisini kullanıyoruz. Bunu da şöyle kullanıyoruz;
+//Her bir veriye karşılık bir versiyon bilgisi üretiliyor. Bu bilgi ister metinsel istersekte sayısal olabilir. Bu versiyon bilgisi veri üzerinde yapılan her bir değişiklik neticesinde güncellenecektir. Dolayısıyla bu güncellemeyi daha kolay bir şekild egerçkeleştirebilmek için sayısal olmasını tercih ederiz. 
+//EF Core üzerinden verileri sorgularken ilgili verilerin versiyon bilgilerini de in-memory'e alıyoruz. Ardından veri üzerinde bir değişiklik yapılırsa eğer bu  inmemory'deki versiyon bilgisi ile verityabanındaki versiyon bilgisini karşılaştıroyruz. Eğer ki bu karşılaştırma doğrulanıyorsa yapılan aksiyon geçerli olacaktır, yok eğer doğrulanmıyorsa demek ki verinin değeri değişmiş anlamına gelecek yani bir tutarsızlık durumu olduğu anlaşılacaktır. İşte bu durumda bir hata fırlatılacak ve aksiyon gerçekleştirilmeyecektir.
+
+//EF Core Optimistic lock yaklaşımı için genetinde yapısal bir özellik barındırmaktadır.
+
+#region Property Based Configuration (ConcurrencyCheck Attribute)
+//Verisel tutarlılığın kontrol edilmek istendiği proeprtyler ConcurrencyCheck attribute'u ile işaretlenir. Bu işaretleme neticesinde her bir entity'nin instance'ı için in-memory'de bir token değeri üretilecektir. Üretilen bu token değeri alınan aksiyon süreçlerinde EF Core tarafından doğrulacnacak ve eğer ki herhangi bir değişiklik yoksa aksiyon başarıyla sonlandırılmış olacaktır. Yok eğer transaction sürecinde ilgili veri üzerinde(ConcurrencyCheck attribute ile işaretlenmiş propertylerde) herhangi  bir değişiklik durumu söz konusuysa o taktirde üretilen token'da değiştirilecek ve haliyle doğrulama sürecinde geçerli olmayacağı anlaşılacağı için veri tutarsızlığı durumu olduğu anlaşılacak ve hata fırlatılacaktır.
+
+//var person = await context.Persons.FindAsync(3);
+//context.Entry(person).State = EntityState.Modified;
+//await context.SaveChangesAsync();
+
+#endregion
+#region RowVersion Column
+//Bu yaklaşımda ise veritabanındaki her bir satıra karşılık versiyon bilgisi fiziksel olarka oluşturulmaktadır.
+//var person = await context.Persons.FindAsync(3);
+//context.Entry(person).State = EntityState.Modified;
+//await context.SaveChangesAsync();
+#endregion
+#endregion
+
+public class Person
+{
+    public int PersonId { get; set; }
+    //[ConcurrencyCheck]
+    public string Name { get; set; }
+    [Timestamp]
+    public byte[] RowVersion { get; set; }
+}
+class ApplicationDbContext : DbContext
+{
+    public DbSet<Person> Persons { get; set; }
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+
+        //modelBuilder.Entity<Person>().Property(p => p.Name).IsConcurrencyToken();
+        modelBuilder.Entity<Person>().Property(p => p.RowVersion).IsRowVersion();
+    }
+    readonly ILoggerFactory _loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+
+        optionsBuilder.UseSqlServer("Server=localhost, 1433;Database=ApplicationDB;User ID=SA;Password=1q2w3e4r+!;TrustServerCertificate=True")
+            .UseLoggerFactory(_loggerFactory);
+    }
+}
+#endregion
+
+#region Value Conversions
+
+
+ApplicationDbContext context = new();
+#region Value Conversions Nedir?
+//EF Core üzerinden veritabanı ile yapılan sorgulama süreçlerinde veriler üzerinde dönüşümler yapmamızı sağlayan bir özelliktir.
+//SELECT sorguları sürecinde gelecek olan veriler üzerinde dönüşüm yapabiliriz.
+//Ya da 
+//UPDATE yahut INSERT sorgularında da yazılım züerinden veritabanına gönderdiğimiz veriler üzerinde de dönüşümler yapabilir ve böylece fiziksel olarak da verileri manipüle edebiliriz.
+#endregion
+#region Value Converter Kullanımı Nasıldır?
+//Value conversions özelliğini EF Core'da ki Value COnverter yapıları tarafından uygulayabilmekteyiz.
+
+#region HasConversion
+//HasConversion fonksiyonu, en sade haliyle EF Core züerinden value converter özelliği gören bir fonksiyondur.
+//var persons = await context.Persons.ToListAsync();
+//Console.WriteLine();
+#endregion
+#endregion
+#region Enum Değerler İle Value Converter Kullanımı
+
+//Normal durumlarda Enum türünde tutulan propertylerin veritabanındaki karşılıkları int olacak şekilde aktarımı gerçekleştirlimektedir. Value converter sayesinde enum türünden olan propertylerinde dönüşümlerini istediğimiz türlere sağlayarak hem ilgili kolonun türünü o türde ayarlayaiblir hem de enum üzerinden çalış sürecinde verisel dönüşümleri ilgili türde sağlayabiliriz.
+
+//var person = new Person() { Name = "Rakıf", Gender2 = Gender.Male, Gender = "M" };
+//await context.Persons.AddAsync(person);
+//await context.SaveChangesAsync();
+//var _person = await context.Persons.FindAsync(person.Id);
+//Console.WriteLine();
+
+#endregion
+#region ValueConverter Sınıfı
+//ValueConverter sınıfı, verisel dönüşümlerideki çalışmaları/sorumlulukları üstlenebilecek bir sınıftır.
+//Yani bu sınıfın instance'ı ile HasConvention fonksiyonun yapılan çalışmaları üstlenebilir ve direkt bu instance'ı ilgili fonksiyona vererek dönüşümsel çalışmalarımızı gerçekleştirebiliiriz.
+
+
+//var _person = await context.Persons.FindAsync(13);
+//Console.WriteLine();
+#endregion
+#region Custom ValueConverter Sınıfı
+//EF Core'da verisel dönüşümler için custom olarak converter sınıfları üretebilmekteyiz. Bunun için tek yapılması gereken custom sınıfının ValueConverter sınıfından miras almasını sağlamaktadır.
+//var _person = await context.Persons.FindAsync(13);
+//Console.WriteLine();
+#endregion
+#region Built-in Converters Yapıları
+//EF Core basit dönüşümler için kendi bünyesinde yerleşik convert sınıfları barındırmaktadır.
+
+#region BoolToZeroOneConverter
+//bool olan verinin int olarak tutulmasını sağlar.
+#endregion
+#region BoolToStringConverter
+//bool olan verinin string olarak tutulmasını sağlar.
+#endregion
+#region BoolToTwoValuesConverter
+//bool olan verinin char olarak tutulmasını sağlar.
+#endregion
+
+//Diğer built-in converters yapılarını aşağıdaki linkten gözlemleyebilirsiniz.
+//https://learn.microsoft.com/en-us/ef/core/modeling/value-conversions?tabs=data-annotations#built-in-converters
+
+#endregion
+#region İlkel Koleksiyonların Serilizasyonu
+//İçerisinde ilkel türlerden olyuşturulmuş koleksiyonları barındıran modelleri migrate etmeye çalıştığımızda hata ile karşılaşmaktayız. By hatadan kurtuılmak ve ilgili veriye koleksiyondaki verileri serilize ederek işleyebilmek için bu koleksiyonu normal metinsel değerlere dönüştürmemize fırsat veren bir conversion operasyonu gerçekleştireibliriz. 
+
+//var person = new Person() { Name = "Filanca", Gender = "M", Gender2 = Gender.Male, Married = true, Titles = new() { "A", "B", "C" } };
+//await context.Persons.AddAsync(person);
+
+//await context.SaveChangesAsync();
+
+//var _person = await context.Persons.FindAsync(person.Id);
+//Console.WriteLine();
+#endregion
+#region .NET 6 - Value Converter For Nullable Fields
+//.NET 6'dan önce value converter'lar null değerlerin dönüşüşmünü desteklememekteydi. .NET 6 ile artık nul ldeğerler de dönüştürülebilmektedir.
+#endregion
+
+
+public class GenderConverter : ValueConverter<Gender, string>
+{
+    public GenderConverter() : base(
+        //INSERT - UPDATE
+        g => g.ToString()
+        ,
+        //SELECT
+        g => (Gender)Enum.Parse(typeof(Gender), g)
+        )
+    {
+    }
+}
+
+public class Person
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public string Gender { get; set; }
+    public Gender Gender2 { get; set; }
+    public bool Married { get; set; }
+    public List<string>? Titles { get; set; }
+}
+public enum Gender
+{
+    Male,
+    Famele
+}
+public class ApplicationDbContext : DbContext
+{
+    public DbSet<Person> Persons { get; set; }
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+        #region Value Converter Kullanımı Nasıldır?
+        //modelBuilder.Entity<Person>()
+        //    .Property(p => p.Gender)
+        //    .HasConversion(
+        //        //INSERT - UPDATE
+        //        g => g.ToUpper()
+        //    ,
+        //        //SELECT
+        //        g => g == "M" ? "Male" : "Female"
+        //    );
+        #endregion
+        #region Enum Değerler İle Value Converter Kullanımı
+        //modelBuilder.Entity<Person>()
+        //   .Property(p => p.Gender2)
+        //   .HasConversion(
+        //       //INSERT - UPDATE
+        //       g => g.ToString()
+        //       //g => (int)g
+        //   ,
+        //       //SELECT
+        //       g => (Gender)Enum.Parse(typeof(Gender), g)
+        //   );
+        #endregion
+        #region ValueConverter Sınıfı
+
+        //ValueConverter<Gender, string> converter = new(
+        //     //INSERT - UPDATE
+        //     g => g.ToString()
+        //     ,
+        //     //SELECT
+        //     g => (Gender)Enum.Parse(typeof(Gender), g)
+        //    );
+
+        //modelBuilder.Entity<Person>()
+        // .Property(p => p.Gender2)
+        // .HasConversion(converter);
+        #endregion
+        #region Custom ValueConverter Sınıfı
+        //modelBuilder.Entity<Person>()
+        // .Property(p => p.Gender2)
+        // .HasConversion<GenderConverter>();
+        #endregion
+        #region BoolToZeroOneConverter
+        //modelBuilder.Entity<Person>()
+        // .Property(p => p.Married)
+        // .HasConversion<BoolToZeroOneConverter<int>>();
+
+        //ya da direkt aşağıdaki gibi int türünü bildirirsek de aynı davranış söz konusu olacaktır.
+        //modelBuilder.Entity<Person>()
+        // .Property(p => p.Married)
+        // .HasConversion<int>();
+        #endregion
+        #region BoolToStringConverter
+        //BoolToStringConverter converter = new("Bekar", "Evli");
+
+        //modelBuilder.Entity<Person>()
+        // .Property(p => p.Married)
+        // .HasConversion(converter);
+        #endregion
+        #region BoolToTwoValuesConverter
+        //BoolToTwoValuesConverter<char> converter = new('B', 'E');
+
+        //modelBuilder.Entity<Person>()
+        // .Property(p => p.Married)
+        // .HasConversion(converter);
+        #endregion
+        #region İlkel Koleksiyonların Serilizasyonu
+        modelBuilder.Entity<Person>()
+            .Property(p => p.Titles)
+            .HasConversion(
+            //INSERT - UPDATE
+            t => JsonSerializer.Serialize(t, (JsonSerializerOptions)null)
+            ,
+            //SELECT
+            t => JsonSerializer.Deserialize<List<string>>(t, (JsonSerializerOptions)null)
+            );
+        #endregion
+    }
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        optionsBuilder.UseSqlServer("Server=localhost, 1433;Database=ApplicationDB;User ID=SA;Password=1q2w3e4r+!;TrustServerCertificate=True");
+    }
+}
+
 #endregion
 
 #region Code First Yaklaşımı
